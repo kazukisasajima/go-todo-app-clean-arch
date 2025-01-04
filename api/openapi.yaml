@@ -1,0 +1,253 @@
+openapi: 3.0.3
+info:
+  title: Task Management API
+  version: 1.0.0
+servers:
+  - url: http://0.0.0.0:8080/api/v1
+  - url: http://localhost:8080/api/v1
+  - url: http://127.0.0.1:8080/api/v1
+paths:
+  /tasks:
+    post:
+      summary: Create a new task
+      operationId: createTask
+      requestBody:
+        $ref: "#/components/requestBodies/TaskCreateRequest"
+        required: true
+      responses:
+        "201":
+          $ref: "#/components/responses/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+  /tasks/{id}:
+    get:
+      tags:
+        - tasks
+      summary: Get a task by ID
+      operationId: getTaskById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          $ref: "#/components/responses/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    patch:
+      tags:
+        - tasks
+      summary: Update a task by ID
+      operationId: updateTaskById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/TaskUpdateRequest"
+        required: true
+      responses:
+        "200":
+          $ref: "#/components/responses/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    delete:
+      tags:
+        - tasks
+      summary: Delete a task by ID
+      operationId: deleteTaskById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Task deleted
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /users:
+    post:
+      summary: Create a new user
+      operationId: createUser
+      requestBody:
+        $ref: "#/components/requestBodies/UserCreateRequest"
+        required: true
+      responses:
+        "201":
+          $ref: "#/components/responses/UserResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+  /users/{id}:
+    get:
+      tags:
+        - users
+      summary: Get a user by ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    delete:
+      tags:
+        - users
+      summary: Delete a user by ID
+      operationId: deleteUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: User deleted
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /users/{id}/tasks:
+    get:
+      tags:
+        - users
+      summary: Get tasks for a specific user
+      operationId: getTasksForUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of tasks for the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+components:
+  schemas:
+    TaskCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        user_id:
+          type: integer
+      required:
+        - title
+        - user_id
+    TaskUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+    TaskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        user_id:
+          type: integer
+      required:
+        - id
+        - title
+        - user_id          
+    UserCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+  requestBodies:
+    TaskCreateRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TaskCreateRequest"
+    TaskUpdateRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TaskUpdateRequest"
+    UserCreateRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UserCreateRequest"
+  responses:
+    TaskResponse:
+      description: Task response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+              title:
+                type: string
+              user_id:
+                type: integer
+            required:
+              - id
+              - title
+              - user_id
+    UserResponse:
+      description: User response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+              email:
+                type: string
+            required:
+              - id
+              - email
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message
