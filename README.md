@@ -37,8 +37,8 @@ oapi-codegen --config=./adapter/controller/echo/config.yaml ./api/openapi.yaml
 1. リポジトリをクローンします。
 
 ```sh
-git clone <リポジトリURL>
-cd <リポジトリ名>
+git clone [git@github.com:kazukisasajima/go-todo-app-clean-arch.git](git@github.com:kazukisasajima/go-todo-app-clean-arch.git)
+cd go-todo-app-clean-arch
 ```
 
 2. MySQLの起動
