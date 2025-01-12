@@ -26,6 +26,7 @@ func main() {
 		if err != nil {
 			logger.Warn("Error loading .env.local file")
 		}
+		logger.Info("Loaded SECRET from .env.development: ", os.Getenv("SECRET"))
 	}
 
 	db, err := database.NewDatabaseSQLFactory(database.InstanceMySQL)

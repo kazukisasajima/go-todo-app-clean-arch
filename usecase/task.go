@@ -5,15 +5,13 @@ import (
 	"go-todo-app-clean-arch/entity"
 )
 
-
-type (
-	TaskUseCase interface {
-		Create(task *entity.Task) (*entity.Task, error)
-		Get(ID int) (*entity.Task, error)
-		Save(*entity.Task) (*entity.Task, error)
-		Delete(ID int) error
-	}
-)
+type TaskUseCase interface {
+	Create(task *entity.Task) (*entity.Task, error)
+	Get(userId int, taskId int) (*entity.Task, error)
+	GetAllTasks(userId int) ([]*entity.Task, error)
+	Save(task *entity.Task, userId int, taskId int) (*entity.Task, error)
+	Delete(taskId int, userId int) error
+}
 
 type taskUseCase struct {
 	taskRepository gateway.TaskRepository
@@ -29,14 +27,18 @@ func (t *taskUseCase) Create(task *entity.Task) (*entity.Task, error) {
 	return t.taskRepository.Create(task)
 }
 
-func (t *taskUseCase) Get(ID int) (*entity.Task, error) {
-	return t.taskRepository.Get(ID)
+func (t *taskUseCase) Get(userId int, task_id int) (*entity.Task, error) {
+	return t.taskRepository.Get(userId, task_id)
 }
 
-func (t *taskUseCase) Save(task *entity.Task) (*entity.Task, error) {
-	return t.taskRepository.Save(task)
+func (t *taskUseCase) GetAllTasks(userId int) ([]*entity.Task, error) {
+	return t.taskRepository.GetAllTasks(userId)
 }
 
-func (t *taskUseCase) Delete(ID int) error {
-	return t.taskRepository.Delete(ID)
+func (t *taskUseCase) Save(task *entity.Task, userId int, taskId int) (*entity.Task, error) {
+	return t.taskRepository.Save(task, userId, taskId)
+}
+
+func (t *taskUseCase) Delete(userId int, taskId int) error {
+	return t.taskRepository.Delete(userId, taskId)
 }

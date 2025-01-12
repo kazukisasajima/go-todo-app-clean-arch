@@ -1,4 +1,4 @@
-package middleware
+package custommiddleware
 
 import (
 	"fmt"
@@ -19,21 +19,16 @@ var (
 	reset  = "\033[0m"
 )
 
-// リクエスト情報をログ出力するミドルウェア
-func EchoZap() echo.MiddlewareFunc {
+// CustomRequestLogger はリクエスト情報をログ出力するミドルウェアです。
+func CustomRequestLogger() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			start := time.Now()
 			err := next(c)
 			stop := time.Now()
 
-			// ステータスコードに応じた色付け
 			status := c.Response().Status
-			statusColor := getStatusColor(status)
-
-			// HTTPメソッドに応じた色付け
 			method := c.Request().Method
-			methodColor := getMethodColor(method)
 
 			// ログの出力
 			logger.ZapLogger.Info("Request",
@@ -47,12 +42,12 @@ func EchoZap() echo.MiddlewareFunc {
 
 			// カラフルな出力
 			fmt.Printf("[%s%s%s] %s%3d%s | %13v | %15s | %s%-7s%s %s\n",
-				blue, time.Now().Format("2006/01/02 - 15:04:05"), reset, // 日時
-				statusColor, status, reset,                             // ステータスコードと色
-				stop.Sub(start),                                        // レイテンシ
-				c.RealIP(),                                            // クライアントIP
-				methodColor, method, reset,                            // HTTPメソッドと色
-				c.Request().URL.Path,                                  // リクエストパス
+				blue, time.Now().Format("2006/01/02 - 15:04:05"), reset,
+				getStatusColor(status), status, reset,
+				stop.Sub(start),
+				c.RealIP(),
+				getMethodColor(method), method, reset,
+				c.Request().URL.Path,
 			)
 
 			return err
@@ -60,8 +55,8 @@ func EchoZap() echo.MiddlewareFunc {
 	}
 }
 
-// RecoveryWithZap はパニックをキャッチしてログを出力するミドルウェア
-func RecoveryWithZap() echo.MiddlewareFunc {
+// CustomRecovery はパニックをログに記録するミドルウェアです。
+func CustomRecovery() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			defer func() {
@@ -77,7 +72,7 @@ func RecoveryWithZap() echo.MiddlewareFunc {
 	}
 }
 
-// HTTPステータスコードに応じた色を返却。
+// ステータスコードに応じた色を返す関数
 func getStatusColor(status int) string {
 	switch {
 	case status >= 200 && status < 300:
@@ -91,7 +86,7 @@ func getStatusColor(status int) string {
 	}
 }
 
-// HTTPメソッドに応じた色を返却
+// HTTPメソッドに応じた色を返す関数
 func getMethodColor(method string) string {
 	switch method {
 	case "GET":

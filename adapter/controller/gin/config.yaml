@@ -1,7 +1,0 @@
-package: presenter
-generate:
-  models: true
-  client: true
-  embedded-spec: true
-  gin-server: true
-output: ./adapter/controller/gin/presenter/api.go

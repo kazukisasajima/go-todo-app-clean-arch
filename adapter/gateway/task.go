@@ -9,9 +9,10 @@ import (
 
 type TaskRepository interface {
 	Create(task *entity.Task) (*entity.Task, error)
-	Get(ID int) (*entity.Task, error)
-	Save(*entity.Task) (*entity.Task, error)
-	Delete(ID int) error
+	Get(userId int, taskId int) (*entity.Task, error)
+	GetAllTasks(userId int) ([]*entity.Task, error)
+	Save(task *entity.Task, userId int, taskId int) (*entity.Task, error)
+	Delete(userId int, taskId int) error
 }
 
 type taskRepository struct {
@@ -30,17 +31,28 @@ func (t *taskRepository) Create(task *entity.Task) (*entity.Task, error) {
 	return task, nil
 }
 
-func (t *taskRepository) Get(ID int) (*entity.Task, error) {
+func (t *taskRepository) Get(userId int, taskId int) (*entity.Task, error) {
 	task := entity.Task{}
-	if err := t.db.First(&task, ID).Error; err != nil {
+	if err := t.db.
+		Where("user_id = ? AND id = ?", userId, taskId).
+		First(&task).Error; err != nil {
 		return nil, err
 	}
 
 	return &task, nil
 }
 
-func (t *taskRepository) Save(task *entity.Task) (*entity.Task, error) {
-	selectedTask, err := t.Get(task.ID)
+func (t *taskRepository) GetAllTasks(userId int) ([]*entity.Task, error) {
+	var tasks []*entity.Task
+	if err := t.db.Where("user_id = ?", userId).Find(&tasks).Error; err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+func (t *taskRepository) Save(task *entity.Task, userId int, taskId int) (*entity.Task, error) {
+	selectedTask, err := t.Get(userId, taskId)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +67,9 @@ func (t *taskRepository) Save(task *entity.Task) (*entity.Task, error) {
 	return selectedTask, nil
 }
 
-func (t *taskRepository) Delete(ID int) error {
-	task := entity.Task{ID: ID}
-	if err := t.db.Where("id = ?", &task.ID).Delete(&task).Error; err != nil {
+func (t *taskRepository) Delete(taskId int, userId int) error {
+	task := entity.Task{ID: taskId, UserID: userId}
+	if err := t.db.Where("id = ? AND user_id=?", taskId, userId).Delete(&task).Error; err != nil {
 		return err
 	}
 	return nil

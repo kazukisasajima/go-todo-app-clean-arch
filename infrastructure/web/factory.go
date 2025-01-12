@@ -24,8 +24,8 @@ type Server interface {
 func NewServer(instance int, db *gorm.DB) (Server, error) {
 	config := NewConfigWeb()
 	switch instance {
-	case InstanceGin:
-		return NewGinServer(config.Host, config.Port, config.CorsAllowOrigins, db)
+	// case InstanceGin:
+	// 	return NewGinServer(config.Host, config.Port, config.CorsAllowOrigins, db)
 	case InstanceEcho:
 		return NewEchoServer(config.Host, config.Port, db)
 	default:

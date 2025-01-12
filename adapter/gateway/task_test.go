@@ -48,7 +48,7 @@ func (suite *TaskRepositorySuite) TestTaskRepositoryCRUD() {
 	suite.Assert().Equal("Test Task", task.Title)
 	suite.Assert().Equal(1, task.UserID)
 
-	getTask, err := suite.repository.Get(task.ID)
+	getTask, err := suite.repository.Get(task.ID, task.UserID)
 	suite.Assert().Nil(err)
 	suite.Assert().Equal("Test Task", getTask.Title)
 	suite.Assert().Equal(1, getTask.UserID)
@@ -60,7 +60,7 @@ func (suite *TaskRepositorySuite) TestTaskRepositoryCRUD() {
 
 	err = suite.repository.Delete(updateTask.ID)
 	suite.Assert().Nil(err)
-	deleteTask, err := suite.repository.Get(updateTask.ID)
+	deleteTask, err := suite.repository.Get(updateTask.ID, 1)
 	suite.Assert().Nil(deleteTask)
 	suite.Assert().Equal("record not found", err.Error())
 }
@@ -99,7 +99,7 @@ func (suite *TaskRepositorySuite) TestTaskGetFailure() {
 		WithArgs(1, 1).
 		WillReturnError(errors.New("get error"))
 
-	task, err := suite.repository.Get(1)
+	task, err := suite.repository.Get(1, 1)
 	suite.Assert().Nil(task)
 	suite.Assert().NotNil(err)
 	suite.Assert().Equal("get error", err.Error())

@@ -46,6 +46,14 @@ func (m *mockUserRepository) GetTasksForUser(userID int) ([]*entity.Task, error)
 	return args.Get(0).([]*entity.Task), args.Error(1)
 }
 
+func (m *mockUserRepository) FindByEmail(email string) (*entity.User, error) {
+	args := m.Called(email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.User), args.Error(1)
+}
+
 type UserUseCaseSuite struct {
 	suite.Suite
 	userUseCase *userUseCase
@@ -125,4 +133,51 @@ func (suite *UserUseCaseSuite) TestGetTasksForUser() {
 	suite.Assert().Nil(err)
 	suite.Assert().Len(tasks, 1)
 	suite.Assert().Equal("Test Task", tasks[0].Title)
+}
+
+func (suite *UserUseCaseSuite) TestSignup() {
+	email := "test@example.com"
+	password := "password123"
+	hashedPassword, _ := HashPassword(password)
+	mockUserRepository := NewMockUserRepository()
+	suite.userUseCase = NewUserUseCase(mockUserRepository)
+
+	user := &entity.User{
+		Email:    email,
+		Password: password,
+	}
+
+	mockUserRepository.On("Create", mock.AnythingOfType("*entity.User")).Return(&entity.User{
+		ID:       1,
+		Email:    email,
+		Password: hashedPassword,
+	}, nil)
+
+	createdUser, err := suite.userUseCase.Signup(user)
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(email, createdUser.Email)
+	suite.Assert().True(CheckPasswordHash(password, createdUser.Password))
+}
+
+func (suite *UserUseCaseSuite) TestLogin() {
+	email := "test@example.com"
+	password := "password123"
+	hashedPassword, _ := HashPassword(password)
+	mockUserRepository := NewMockUserRepository()
+	suite.userUseCase = NewUserUseCase(mockUserRepository)
+
+	credentials := &entity.Credentials{
+		Email:    email,
+		Password: password,
+	}
+
+	mockUserRepository.On("FindByEmail", email).Return(&entity.User{
+		ID:       1,
+		Email:    email,
+		Password: hashedPassword,
+	}, nil)
+
+	jwt, err := suite.userUseCase.Login(credentials)
+	suite.Assert().Nil(err)
+	suite.Assert().NotEmpty(jwt)
 }

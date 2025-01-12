@@ -22,18 +22,25 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+const (
+	CsrfAuthScopes = "CsrfAuth.Scopes"
+)
+
+// Task defines model for Task.
+type Task struct {
+	Id     int    `json:"id"`
+	Title  string `json:"title"`
+	UserId int    `json:"user_id"`
+}
+
 // TaskCreateRequest defines model for TaskCreateRequest.
 type TaskCreateRequest struct {
 	Title  string `json:"title"`
 	UserId int    `json:"user_id"`
 }
 
-// TaskResponse defines model for TaskResponse.
-type TaskResponse struct {
-	Id     int    `json:"id"`
-	Title  string `json:"title"`
-	UserId int    `json:"user_id"`
-}
+// TaskList defines model for TaskList.
+type TaskList = []Task
 
 // TaskUpdateRequest defines model for TaskUpdateRequest.
 type TaskUpdateRequest struct {
@@ -51,20 +58,35 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
+// TaskListResponse defines model for TaskListResponse.
+type TaskListResponse = TaskList
+
+// TaskResponse defines model for TaskResponse.
+type TaskResponse = Task
+
 // UserResponse defines model for UserResponse.
 type UserResponse struct {
 	Email string `json:"email"`
 	Id    int    `json:"id"`
 }
 
+// LoginUserJSONBody defines parameters for LoginUser.
+type LoginUserJSONBody struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
+// LoginUserJSONRequestBody defines body for LoginUser for application/json ContentType.
+type LoginUserJSONRequestBody LoginUserJSONBody
+
+// CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
+type CreateUserJSONRequestBody = UserCreateRequest
+
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = TaskCreateRequest
 
 // UpdateTaskByIdJSONRequestBody defines body for UpdateTaskById for application/json ContentType.
 type UpdateTaskByIdJSONRequestBody = TaskUpdateRequest
-
-// CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
-type CreateUserJSONRequestBody = UserCreateRequest
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -139,6 +161,25 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetCsrfToken request
+	GetCsrfToken(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LoginUserWithBody request with any body
+	LoginUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	LoginUser(ctx context.Context, body LoginUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LogoutUser request
+	LogoutUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateUserWithBody request with any body
+	CreateUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateUser(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAllTasks request
+	GetAllTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateTaskWithBody request with any body
 	CreateTaskWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -155,19 +196,95 @@ type ClientInterface interface {
 
 	UpdateTaskById(ctx context.Context, id int, body UpdateTaskByIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateUserWithBody request with any body
-	CreateUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteCurrentUser request
+	DeleteCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateUser(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetCurrentUser request
+	GetCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
 
-	// DeleteUserById request
-	DeleteUserById(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) GetCsrfToken(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCsrfTokenRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	// GetUserById request
-	GetUserById(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) LoginUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLoginUserRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	// GetTasksForUser request
-	GetTasksForUser(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) LoginUser(ctx context.Context, body LoginUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLoginUserRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) LogoutUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLogoutUserRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateUserRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateUser(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateUserRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetAllTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAllTasksRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) CreateTaskWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -242,8 +359,8 @@ func (c *Client) UpdateTaskById(ctx context.Context, id int, body UpdateTaskById
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateUserRequestWithBody(c.Server, contentType, body)
+func (c *Client) DeleteCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteCurrentUserRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -254,8 +371,8 @@ func (c *Client) CreateUserWithBody(ctx context.Context, contentType string, bod
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateUser(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateUserRequest(c.Server, body)
+func (c *Client) GetCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCurrentUserRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -266,40 +383,165 @@ func (c *Client) CreateUser(ctx context.Context, body CreateUserJSONRequestBody,
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteUserById(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteUserByIdRequest(c.Server, id)
+// NewGetCsrfTokenRequest generates requests for GetCsrfToken
+func NewGetCsrfTokenRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+
+	operationPath := fmt.Sprintf("/auth/csrf")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
 		return nil, err
 	}
-	return c.Client.Do(req)
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
-func (c *Client) GetUserById(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetUserByIdRequest(c.Server, id)
+// NewLoginUserRequest calls the generic LoginUser builder with application/json body
+func NewLoginUserRequest(server string, body LoginUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
+	bodyReader = bytes.NewReader(buf)
+	return NewLoginUserRequestWithBody(server, "application/json", bodyReader)
 }
 
-func (c *Client) GetTasksForUser(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetTasksForUserRequest(c.Server, id)
+// NewLoginUserRequestWithBody generates requests for LoginUser with any type of body
+func NewLoginUserRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+
+	operationPath := fmt.Sprintf("/auth/login")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
 		return nil, err
 	}
-	return c.Client.Do(req)
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewLogoutUserRequest generates requests for LogoutUser
+func NewLogoutUserRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/logout")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateUserRequest calls the generic CreateUser builder with application/json body
+func NewCreateUserRequest(server string, body CreateUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateUserRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateUserRequestWithBody generates requests for CreateUser with any type of body
+func NewCreateUserRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/signup")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetAllTasksRequest generates requests for GetAllTasks
+func NewGetAllTasksRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/tasks")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewCreateTaskRequest calls the generic CreateTask builder with application/json body
@@ -447,7 +689,7 @@ func NewUpdateTaskByIdRequestWithBody(server string, id int, contentType string,
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -457,19 +699,8 @@ func NewUpdateTaskByIdRequestWithBody(server string, id int, contentType string,
 	return req, nil
 }
 
-// NewCreateUserRequest calls the generic CreateUser builder with application/json body
-func NewCreateUserRequest(server string, body CreateUserJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateUserRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewCreateUserRequestWithBody generates requests for CreateUser with any type of body
-func NewCreateUserRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewDeleteCurrentUserRequest generates requests for DeleteCurrentUser
+func NewDeleteCurrentUserRequest(server string) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -487,42 +718,6 @@ func NewCreateUserRequestWithBody(server string, contentType string, body io.Rea
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewDeleteUserByIdRequest generates requests for DeleteUserById
-func NewDeleteUserByIdRequest(server string, id int) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/users/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
 	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -531,57 +726,16 @@ func NewDeleteUserByIdRequest(server string, id int) (*http.Request, error) {
 	return req, nil
 }
 
-// NewGetUserByIdRequest generates requests for GetUserById
-func NewGetUserByIdRequest(server string, id int) (*http.Request, error) {
+// NewGetCurrentUserRequest generates requests for GetCurrentUser
+func NewGetCurrentUserRequest(server string) (*http.Request, error) {
 	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/users/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetTasksForUserRequest generates requests for GetTasksForUser
-func NewGetTasksForUserRequest(server string, id int) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/users/%s/tasks", pathParam0)
+	operationPath := fmt.Sprintf("/users")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -642,6 +796,25 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetCsrfTokenWithResponse request
+	GetCsrfTokenWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCsrfTokenResponse, error)
+
+	// LoginUserWithBodyWithResponse request with any body
+	LoginUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginUserResponse, error)
+
+	LoginUserWithResponse(ctx context.Context, body LoginUserJSONRequestBody, reqEditors ...RequestEditorFn) (*LoginUserResponse, error)
+
+	// LogoutUserWithResponse request
+	LogoutUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*LogoutUserResponse, error)
+
+	// CreateUserWithBodyWithResponse request with any body
+	CreateUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateUserResponse, error)
+
+	CreateUserWithResponse(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateUserResponse, error)
+
+	// GetAllTasksWithResponse request
+	GetAllTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllTasksResponse, error)
+
 	// CreateTaskWithBodyWithResponse request with any body
 	CreateTaskWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTaskResponse, error)
 
@@ -658,19 +831,131 @@ type ClientWithResponsesInterface interface {
 
 	UpdateTaskByIdWithResponse(ctx context.Context, id int, body UpdateTaskByIdJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTaskByIdResponse, error)
 
-	// CreateUserWithBodyWithResponse request with any body
-	CreateUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateUserResponse, error)
+	// DeleteCurrentUserWithResponse request
+	DeleteCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentUserResponse, error)
 
-	CreateUserWithResponse(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateUserResponse, error)
+	// GetCurrentUserWithResponse request
+	GetCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentUserResponse, error)
+}
 
-	// DeleteUserByIdWithResponse request
-	DeleteUserByIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteUserByIdResponse, error)
+type GetCsrfTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		CsrfToken *string `json:"csrf_token,omitempty"`
+	}
+}
 
-	// GetUserByIdWithResponse request
-	GetUserByIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetUserByIdResponse, error)
+// Status returns HTTPResponse.Status
+func (r GetCsrfTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
 
-	// GetTasksForUserWithResponse request
-	GetTasksForUserWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetTasksForUserResponse, error)
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCsrfTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type LoginUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		CsrfToken *string `json:"csrf_token,omitempty"`
+		Message   string  `json:"message"`
+	}
+	JSON401 *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r LoginUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LoginUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type LogoutUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Message string `json:"message"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r LogoutUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LogoutUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *UserResponse
+	JSON400      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetAllTasksResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *TaskListResponse
+	JSON400      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAllTasksResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAllTasksResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type CreateTaskResponse struct {
@@ -767,30 +1052,7 @@ func (r UpdateTaskByIdResponse) StatusCode() int {
 	return 0
 }
 
-type CreateUserResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *UserResponse
-	JSON400      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateUserResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateUserResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type DeleteUserByIdResponse struct {
+type DeleteCurrentUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON400      *ErrorResponse
@@ -798,7 +1060,7 @@ type DeleteUserByIdResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteUserByIdResponse) Status() string {
+func (r DeleteCurrentUserResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -806,14 +1068,14 @@ func (r DeleteUserByIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteUserByIdResponse) StatusCode() int {
+func (r DeleteCurrentUserResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetUserByIdResponse struct {
+type GetCurrentUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *UserResponse
@@ -822,7 +1084,7 @@ type GetUserByIdResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r GetUserByIdResponse) Status() string {
+func (r GetCurrentUserResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -830,35 +1092,72 @@ func (r GetUserByIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetUserByIdResponse) StatusCode() int {
+func (r GetCurrentUserResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetTasksForUserResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *[]TaskResponse
-	JSON400      *ErrorResponse
-	JSON404      *ErrorResponse
+// GetCsrfTokenWithResponse request returning *GetCsrfTokenResponse
+func (c *ClientWithResponses) GetCsrfTokenWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCsrfTokenResponse, error) {
+	rsp, err := c.GetCsrfToken(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCsrfTokenResponse(rsp)
 }
 
-// Status returns HTTPResponse.Status
-func (r GetTasksForUserResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
+// LoginUserWithBodyWithResponse request with arbitrary body returning *LoginUserResponse
+func (c *ClientWithResponses) LoginUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginUserResponse, error) {
+	rsp, err := c.LoginUserWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
-	return http.StatusText(0)
+	return ParseLoginUserResponse(rsp)
 }
 
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetTasksForUserResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
+func (c *ClientWithResponses) LoginUserWithResponse(ctx context.Context, body LoginUserJSONRequestBody, reqEditors ...RequestEditorFn) (*LoginUserResponse, error) {
+	rsp, err := c.LoginUser(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
-	return 0
+	return ParseLoginUserResponse(rsp)
+}
+
+// LogoutUserWithResponse request returning *LogoutUserResponse
+func (c *ClientWithResponses) LogoutUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*LogoutUserResponse, error) {
+	rsp, err := c.LogoutUser(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLogoutUserResponse(rsp)
+}
+
+// CreateUserWithBodyWithResponse request with arbitrary body returning *CreateUserResponse
+func (c *ClientWithResponses) CreateUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateUserResponse, error) {
+	rsp, err := c.CreateUserWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateUserResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateUserWithResponse(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateUserResponse, error) {
+	rsp, err := c.CreateUser(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateUserResponse(rsp)
+}
+
+// GetAllTasksWithResponse request returning *GetAllTasksResponse
+func (c *ClientWithResponses) GetAllTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllTasksResponse, error) {
+	rsp, err := c.GetAllTasks(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAllTasksResponse(rsp)
 }
 
 // CreateTaskWithBodyWithResponse request with arbitrary body returning *CreateTaskResponse
@@ -913,48 +1212,180 @@ func (c *ClientWithResponses) UpdateTaskByIdWithResponse(ctx context.Context, id
 	return ParseUpdateTaskByIdResponse(rsp)
 }
 
-// CreateUserWithBodyWithResponse request with arbitrary body returning *CreateUserResponse
-func (c *ClientWithResponses) CreateUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateUserResponse, error) {
-	rsp, err := c.CreateUserWithBody(ctx, contentType, body, reqEditors...)
+// DeleteCurrentUserWithResponse request returning *DeleteCurrentUserResponse
+func (c *ClientWithResponses) DeleteCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentUserResponse, error) {
+	rsp, err := c.DeleteCurrentUser(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateUserResponse(rsp)
+	return ParseDeleteCurrentUserResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateUserWithResponse(ctx context.Context, body CreateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateUserResponse, error) {
-	rsp, err := c.CreateUser(ctx, body, reqEditors...)
+// GetCurrentUserWithResponse request returning *GetCurrentUserResponse
+func (c *ClientWithResponses) GetCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentUserResponse, error) {
+	rsp, err := c.GetCurrentUser(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateUserResponse(rsp)
+	return ParseGetCurrentUserResponse(rsp)
 }
 
-// DeleteUserByIdWithResponse request returning *DeleteUserByIdResponse
-func (c *ClientWithResponses) DeleteUserByIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteUserByIdResponse, error) {
-	rsp, err := c.DeleteUserById(ctx, id, reqEditors...)
+// ParseGetCsrfTokenResponse parses an HTTP response from a GetCsrfTokenWithResponse call
+func ParseGetCsrfTokenResponse(rsp *http.Response) (*GetCsrfTokenResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteUserByIdResponse(rsp)
+
+	response := &GetCsrfTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			CsrfToken *string `json:"csrf_token,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
-// GetUserByIdWithResponse request returning *GetUserByIdResponse
-func (c *ClientWithResponses) GetUserByIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetUserByIdResponse, error) {
-	rsp, err := c.GetUserById(ctx, id, reqEditors...)
+// ParseLoginUserResponse parses an HTTP response from a LoginUserWithResponse call
+func ParseLoginUserResponse(rsp *http.Response) (*LoginUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetUserByIdResponse(rsp)
+
+	response := &LoginUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			CsrfToken *string `json:"csrf_token,omitempty"`
+			Message   string  `json:"message"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
 }
 
-// GetTasksForUserWithResponse request returning *GetTasksForUserResponse
-func (c *ClientWithResponses) GetTasksForUserWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetTasksForUserResponse, error) {
-	rsp, err := c.GetTasksForUser(ctx, id, reqEditors...)
+// ParseLogoutUserResponse parses an HTTP response from a LogoutUserWithResponse call
+func ParseLogoutUserResponse(rsp *http.Response) (*LogoutUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetTasksForUserResponse(rsp)
+
+	response := &LogoutUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateUserResponse parses an HTTP response from a CreateUserWithResponse call
+func ParseCreateUserResponse(rsp *http.Response) (*CreateUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest UserResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetAllTasksResponse parses an HTTP response from a GetAllTasksWithResponse call
+func ParseGetAllTasksResponse(rsp *http.Response) (*GetAllTasksResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAllTasksResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TaskListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseCreateTaskResponse parses an HTTP response from a CreateTaskWithResponse call
@@ -1103,48 +1534,15 @@ func ParseUpdateTaskByIdResponse(rsp *http.Response) (*UpdateTaskByIdResponse, e
 	return response, nil
 }
 
-// ParseCreateUserResponse parses an HTTP response from a CreateUserWithResponse call
-func ParseCreateUserResponse(rsp *http.Response) (*CreateUserResponse, error) {
+// ParseDeleteCurrentUserResponse parses an HTTP response from a DeleteCurrentUserWithResponse call
+func ParseDeleteCurrentUserResponse(rsp *http.Response) (*DeleteCurrentUserResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateUserResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest UserResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteUserByIdResponse parses an HTTP response from a DeleteUserByIdWithResponse call
-func ParseDeleteUserByIdResponse(rsp *http.Response) (*DeleteUserByIdResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteUserByIdResponse{
+	response := &DeleteCurrentUserResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1169,15 +1567,15 @@ func ParseDeleteUserByIdResponse(rsp *http.Response) (*DeleteUserByIdResponse, e
 	return response, nil
 }
 
-// ParseGetUserByIdResponse parses an HTTP response from a GetUserByIdWithResponse call
-func ParseGetUserByIdResponse(rsp *http.Response) (*GetUserByIdResponse, error) {
+// ParseGetCurrentUserResponse parses an HTTP response from a GetCurrentUserWithResponse call
+func ParseGetCurrentUserResponse(rsp *http.Response) (*GetCurrentUserResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetUserByIdResponse{
+	response := &GetCurrentUserResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1185,46 +1583,6 @@ func ParseGetUserByIdResponse(rsp *http.Response) (*GetUserByIdResponse, error) 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest UserResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetTasksForUserResponse parses an HTTP response from a GetTasksForUserWithResponse call
-func ParseGetTasksForUserResponse(rsp *http.Response) (*GetTasksForUserResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetTasksForUserResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []TaskResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1251,6 +1609,21 @@ func ParseGetTasksForUserResponse(rsp *http.Response) (*GetTasksForUserResponse,
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get a CSRF token
+	// (GET /auth/csrf)
+	GetCsrfToken(ctx echo.Context) error
+	// Log in a user
+	// (POST /auth/login)
+	LoginUser(ctx echo.Context) error
+	// Log out a user
+	// (POST /auth/logout)
+	LogoutUser(ctx echo.Context) error
+	// Create a new user
+	// (POST /auth/signup)
+	CreateUser(ctx echo.Context) error
+	// Get all tasks
+	// (GET /tasks)
+	GetAllTasks(ctx echo.Context) error
 	// Create a new task
 	// (POST /tasks)
 	CreateTask(ctx echo.Context) error
@@ -1261,20 +1634,14 @@ type ServerInterface interface {
 	// (GET /tasks/{id})
 	GetTaskById(ctx echo.Context, id int) error
 	// Update a task by ID
-	// (PATCH /tasks/{id})
+	// (PUT /tasks/{id})
 	UpdateTaskById(ctx echo.Context, id int) error
-	// Create a new user
-	// (POST /users)
-	CreateUser(ctx echo.Context) error
-	// Delete a user by ID
-	// (DELETE /users/{id})
-	DeleteUserById(ctx echo.Context, id int) error
-	// Get a user by ID
-	// (GET /users/{id})
-	GetUserById(ctx echo.Context, id int) error
-	// Get tasks for a specific user
-	// (GET /users/{id}/tasks)
-	GetTasksForUser(ctx echo.Context, id int) error
+	// Delete the current user
+	// (DELETE /users)
+	DeleteCurrentUser(ctx echo.Context) error
+	// Get the current user's information
+	// (GET /users)
+	GetCurrentUser(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -1282,9 +1649,62 @@ type ServerInterfaceWrapper struct {
 	Handler ServerInterface
 }
 
+// GetCsrfToken converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCsrfToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetCsrfToken(ctx)
+	return err
+}
+
+// LoginUser converts echo context to params.
+func (w *ServerInterfaceWrapper) LoginUser(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.LoginUser(ctx)
+	return err
+}
+
+// LogoutUser converts echo context to params.
+func (w *ServerInterfaceWrapper) LogoutUser(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(CsrfAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.LogoutUser(ctx)
+	return err
+}
+
+// CreateUser converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateUser(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(CsrfAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.CreateUser(ctx)
+	return err
+}
+
+// GetAllTasks converts echo context to params.
+func (w *ServerInterfaceWrapper) GetAllTasks(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(CsrfAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetAllTasks(ctx)
+	return err
+}
+
 // CreateTask converts echo context to params.
 func (w *ServerInterfaceWrapper) CreateTask(ctx echo.Context) error {
 	var err error
+
+	ctx.Set(CsrfAuthScopes, []string{})
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.CreateTask(ctx)
@@ -1302,6 +1722,8 @@ func (w *ServerInterfaceWrapper) DeleteTaskById(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
 	}
 
+	ctx.Set(CsrfAuthScopes, []string{})
+
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.DeleteTaskById(ctx, id)
 	return err
@@ -1317,6 +1739,8 @@ func (w *ServerInterfaceWrapper) GetTaskById(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
 	}
+
+	ctx.Set(CsrfAuthScopes, []string{})
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.GetTaskById(ctx, id)
@@ -1334,65 +1758,32 @@ func (w *ServerInterfaceWrapper) UpdateTaskById(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
 	}
 
+	ctx.Set(CsrfAuthScopes, []string{})
+
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.UpdateTaskById(ctx, id)
 	return err
 }
 
-// CreateUser converts echo context to params.
-func (w *ServerInterfaceWrapper) CreateUser(ctx echo.Context) error {
+// DeleteCurrentUser converts echo context to params.
+func (w *ServerInterfaceWrapper) DeleteCurrentUser(ctx echo.Context) error {
 	var err error
 
+	ctx.Set(CsrfAuthScopes, []string{})
+
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.CreateUser(ctx)
+	err = w.Handler.DeleteCurrentUser(ctx)
 	return err
 }
 
-// DeleteUserById converts echo context to params.
-func (w *ServerInterfaceWrapper) DeleteUserById(ctx echo.Context) error {
+// GetCurrentUser converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCurrentUser(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "id" -------------
-	var id int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
+	ctx.Set(CsrfAuthScopes, []string{})
 
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.DeleteUserById(ctx, id)
-	return err
-}
-
-// GetUserById converts echo context to params.
-func (w *ServerInterfaceWrapper) GetUserById(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetUserById(ctx, id)
-	return err
-}
-
-// GetTasksForUser converts echo context to params.
-func (w *ServerInterfaceWrapper) GetTasksForUser(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetTasksForUser(ctx, id)
+	err = w.Handler.GetCurrentUser(ctx)
 	return err
 }
 
@@ -1424,34 +1815,41 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.GET(baseURL+"/auth/csrf", wrapper.GetCsrfToken)
+	router.POST(baseURL+"/auth/login", wrapper.LoginUser)
+	router.POST(baseURL+"/auth/logout", wrapper.LogoutUser)
+	router.POST(baseURL+"/auth/signup", wrapper.CreateUser)
+	router.GET(baseURL+"/tasks", wrapper.GetAllTasks)
 	router.POST(baseURL+"/tasks", wrapper.CreateTask)
 	router.DELETE(baseURL+"/tasks/:id", wrapper.DeleteTaskById)
 	router.GET(baseURL+"/tasks/:id", wrapper.GetTaskById)
-	router.PATCH(baseURL+"/tasks/:id", wrapper.UpdateTaskById)
-	router.POST(baseURL+"/users", wrapper.CreateUser)
-	router.DELETE(baseURL+"/users/:id", wrapper.DeleteUserById)
-	router.GET(baseURL+"/users/:id", wrapper.GetUserById)
-	router.GET(baseURL+"/users/:id/tasks", wrapper.GetTasksForUser)
+	router.PUT(baseURL+"/tasks/:id", wrapper.UpdateTaskById)
+	router.DELETE(baseURL+"/users", wrapper.DeleteCurrentUser)
+	router.GET(baseURL+"/users", wrapper.GetCurrentUser)
 
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/9RXUW/aMBD+K9FtjxEJbaVVeVvXrULapKlanyo0uckBbontnk0rhPLfJ9uhJCRAxijt",
-	"xAty7Lvv++7uc7KAVOZKChRGQ7IAwscZanMhM45u4RfTD18ImcFr/8guplIYFO4vU2rKU2a4FNG9lsKu",
-	"6XSCObP/PhKOIIEP0SpL5J/qqBm5KIoidBlvVPZKGeuRfcYbjfQ6HJuRC5+SUCsptNf4K5Gk63Llr3Ir",
-	"kgrJlLXKUWs2dhHMXCEkoA1xMQaf8XHGCTNIbl82DsPlRnl3j6lDF0KGOiWubEpIPLhgiRfKAh0ALc8q",
-	"QLkwOEay4Q030zYOIcw00u/2Y2sEeQbLQKtjXdhabjWytoIHIIs549NWUt35+BhdWFjQFRZFWOLaPNF1",
-	"tIcowW71m5307hpkgxt1U6toCddqNRtaZSQpZwaSciVs8lVM62dJ2e6JX4Z4OdHeRlyMZIWSH4cfTLAx",
-	"5ihM8PnnAEJ4QtK+0fq9uBdbJFKhYIpDAqe9uHfqMpmJ4xMZph/cPyU9X8vWjc0ggwS8HDYThJX7Z77J",
-	"W2tXVNstsuauJ3F/c6hyX1TrxCKEszjefaju227MZnnOaP7CKmCBwOfAKuCeey2iBc8KGz7DKRpsSnLp",
-	"1i2mi/kgc2ISy9EgaUhuF8Ct9lZgCEGw3DV6BtWKG5phWHGjxjgMGyqdeUQNN/Qgs31VsafO/k1LL0fA",
-	"nI7B3TwYXNppYGPtjMa117AIYYwt7XWF5shCxsdptwMIe4Vmt6qKmXTS1NWb4utLu4cfrL3j/ccF8kx2",
-	"1cgai73DdpqsvX32MdmW19h9TLb2LnVwk7UKwEqLjiZrMb2tybqXtXdksla9Rqv59tpmskcWMj5Oux3M",
-	"ZLeqWm/a1QvTtgtNf5NUzvPR9O788cMN5rrL53hV6RIFI2Lztq+a71ybQI6cF+pgJCkwEyzH/k2ruwLE",
-	"Aq0w5SOeelwtpbankZ6WxZrRFBKYGKOSKIp77pecx+dxxBSPnvpQhGubpjJl04nUZvu2/sknF61f3zYs",
-	"/gQAAP//e4yJ8PMRAAA=",
+	"H4sIAAAAAAAC/9xYXW/bNhT9KwQ3YC+KJbcBVugtdbsha/aBxMUGBEbBStc2G4lkSSqFEei/D5eUbcmi",
+	"P+LFBlb0JaXIew/PPTy89BPNZKmkAGENTZ+ohq8VGPtW5hzcwJiZh5EGZuHWf8LBTAoLwv3JlCp4xiyX",
+	"Iv5ipMAxk82hZPjXjxqmNKU/xOsssf9q4n7kuq7ryGX8qPITZexG9hk/GtCn2WM/cu1TajBKCuM5fq+1",
+	"1LfNyLNyKy0VaNvUqgRj2MxFsAsFNKXGai5m1Gf8WnENOU3vVxMn0XKi/PwFMocuojmYTHOFKWnqwZEl",
+	"XtoU6IYbexTiffXBwCEYOE7klFhmHkwPzkmghGDgeCc7VvgFSgcl40WgcBHleWuYCwsz0L2C8pxGTYxD",
+	"aoqgW7uoowbX6sT3AYZhRNRyW0AQeGVAfzocvQ+0XtbfRxQ2oy7Ol8BzKBSnVeTGQmkOU9QqEtOaLeg2",
+	"uztsT3UAV9DLtmhtKnXJLE2bkajPmWLGfJM6328pyxCrFQEdRtRAVmluF3dIikczMnp6Vdm5IxLFOQeW",
+	"g6YRFazE5f9cjO5uf7kY//nh/R9rjEzxD7Dw4uZiKls8+UP6OxNsBiUIS67+uqYRfQRtvPyHg2SQ4Pak",
+	"AsEUpyl9PUgGrx18O3ewYlbZeZwZPcX/zcDxiCy683yd05T+ChbBj+UDCLph6a+S5D+4Aab9ZF3cvcQj",
+	"zmbuIUcfuSRuOtFgNYdHyH1pqrJkeuH3RRhZT3SfPR+FnHGHSUkTYOQGP6MCadTqJBYv4Yvn1mpnidUV",
+	"1OercPT8mzx6rg5cqYipsgyMmVZIhz94Dt4d2IuRlA/cQeiuvAOD54hITX77e0yaaVFrq5uQMftlMtzm",
+	"kCta424j1FXljZwRLggj6MpdScrK7tSkrOxKlC9WwZM0Wx5suyxt16Tpfdsv7yf1ZJMhXN2jyPCZqNR2",
+	"ivx9ET634YK1HgmhHrdH9AG17zRSTjDJUYI5jCsPmDAi4FuLLtdd7jL8q6IYuzlhLe1G22ucT75NZ+VF",
+	"4btmZ5I7BOA6lCMEEHjIHSOATh9/XgFY3+0vBRA/8bz2xleAhT5f79w4An67uM7dTaJZCda5533Tx2Ar",
+	"se5iXI/bvVEClrnuSCc9Ci/7VuwaHQ8yP5YyXHV5QqI9V4Q5ksnnBbl+h7c3mxnXajthTupo64k7M8vJ",
+	"eYR6atZ9D7eHclUFKPdvkdOzfoTJbPx2873Wzm9zX/nQrfDiMvuNalRpDWJLDxSwFffzwP/DVuwcSOa3",
+	"56/xNVGenF3WspOX5DwtyzmMYJOknwzBJzM+qLDgfcp8fP24PPOVLvBhbq1K4zgZuH/pm+RNEjPF48ch",
+	"raONSYXMWDGXxu6eNnz1s4s27E6b1P8GAAD//x131EiYFgAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

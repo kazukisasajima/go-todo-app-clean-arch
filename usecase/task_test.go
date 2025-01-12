@@ -25,12 +25,20 @@ func (m *mockTaskRepository) Create(task *entity.Task) (*entity.Task, error) {
 	return args.Get(0).(*entity.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) Get(ID int) (*entity.Task, error) {
-	args := m.Called(ID)
+func (m *mockTaskRepository) Get(userID int, ID int) (*entity.Task, error) {
+	args := m.Called(userID, ID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*entity.Task), args.Error(1)
+}
+
+func (m *mockTaskRepository) GetAllTasks(userID int) ([]*entity.Task, error) {
+	args := m.Called(userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*entity.Task), args.Error(1)
 }
 
 func (m *mockTaskRepository) Save(task *entity.Task) (*entity.Task, error) {
@@ -94,7 +102,7 @@ func (suite *TaskUseCaseSuite) TestGet() {
 		UserID: userID,
 	}, nil)
 
-	task, err := suite.taskUseCase.Get(taskID)
+	task, err := suite.taskUseCase.Get(userID, taskID)
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(taskID, task.ID)
 	suite.Assert().Equal(title, task.Title)
@@ -137,3 +145,26 @@ func (suite *TaskUseCaseSuite) TestDelete() {
 	err := suite.taskUseCase.Delete(taskID)
 	suite.Assert().Nil(err)
 }
+
+func (suite *TaskUseCaseSuite) TestGetAllTasks() {
+	userID := 1
+	title := "Test Task"
+	mockTaskRepository := NewMockTaskRepository()
+	suite.taskUseCase = NewTaskUseCase(mockTaskRepository)
+
+	mockTaskRepository.On("GetAllTasks", userID).Return([]*entity.Task{
+		{
+			ID:     1,
+			Title:  title,
+			UserID: userID,
+		},
+	}, nil)
+
+	tasks, err := suite.taskUseCase.GetAllTasks(userID)
+	suite.Assert().Nil(err)
+	suite.Assert().Len(tasks, 1)
+	suite.Assert().Equal(title, tasks[0].Title)
+	suite.Assert().Equal(userID, tasks[0].UserID)
+}
+
+

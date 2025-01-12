@@ -19,6 +19,18 @@ paths:
           $ref: "#/components/responses/TaskResponse"
         "400":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求            
+    get:
+      summary: Get all tasks
+      operationId: getAllTasks
+      responses:
+        "200":
+          $ref: "#/components/responses/TaskListResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求          
   /tasks/{id}:
     get:
       tags:
@@ -38,7 +50,9 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
-    patch:
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求            
+    put:
       tags:
         - tasks
       summary: Update a task by ID
@@ -59,6 +73,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求             
     delete:
       tags:
         - tasks
@@ -77,7 +93,39 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求             
   /users:
+    get:
+      tags:
+        - users
+      summary: Get the current user's information
+      operationId: getCurrentUser
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # 認証が必須
+    delete:
+      tags:
+        - users
+      summary: Delete the current user
+      operationId: deleteCurrentUser
+      responses:
+        "204":
+          description: User deleted
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+      security:
+        - CsrfAuth: []  # 認証が必須
+
+  /auth/signup:
     post:
       summary: Create a new user
       operationId: createUser
@@ -89,70 +137,107 @@ paths:
           $ref: "#/components/responses/UserResponse"
         "400":
           $ref: "#/components/responses/ErrorResponse"
-  /users/{id}:
-    get:
-      tags:
-        - users
-      summary: Get a user by ID
-      operationId: getUserById
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求             
+  /auth/login:
+    post:
+      summary: Log in a user
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+        required: true
       responses:
         "200":
-          $ref: "#/components/responses/UserResponse"
-        "400":
-          $ref: "#/components/responses/ErrorResponse"
-        "404":
-          $ref: "#/components/responses/ErrorResponse"
-    delete:
-      tags:
-        - users
-      summary: Delete a user by ID
-      operationId: deleteUserById
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: User deleted
-        "400":
-          $ref: "#/components/responses/ErrorResponse"
-        "404":
-          $ref: "#/components/responses/ErrorResponse"
-  /users/{id}/tasks:
-    get:
-      tags:
-        - users
-      summary: Get tasks for a specific user
-      operationId: getTasksForUser
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: List of tasks for the user
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Session or JWT Cookie
+              schema:
+                type: string
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TaskResponse"
-        "400":
+                type: object
+                properties:
+                  message:
+                    type: string
+                  csrf_token:
+                    type: string
+                required:
+                  - message
+                  - auth_token
+        "401":
           $ref: "#/components/responses/ErrorResponse"
-        "404":
-          $ref: "#/components/responses/ErrorResponse"
+  /auth/logout:
+    post:
+      summary: Log out a user
+      operationId: logoutUser
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+      security:
+        - CsrfAuth: []  # X-CSRF-TOKEN を要求                     
+  /auth/csrf:
+    get:
+      summary: Get a CSRF token
+      operationId: getCsrfToken
+      responses:
+        "200":
+          description: CSRF token retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  csrf_token:
+                    type: string
+                required:
+                  - auth_token
 components:
+  securitySchemes:
+    CsrfAuth:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN  # カスタムヘッダー名を指定
   schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        user_id:
+          type: integer
+      required:
+        - id
+        - title
+        - user_id
+    TaskList:
+      type: array
+      items:
+        $ref: "#/components/schemas/Task"
     TaskCreateRequest:
       type: object
       properties:
@@ -167,20 +252,7 @@ components:
       type: object
       properties:
         title:
-          type: string
-    TaskResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        user_id:
-          type: integer
-      required:
-        - id
-        - title
-        - user_id          
+          type: string       
     UserCreateRequest:
       type: object
       properties:
@@ -214,18 +286,13 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              id:
-                type: integer
-              title:
-                type: string
-              user_id:
-                type: integer
-            required:
-              - id
-              - title
-              - user_id
+            $ref: "#/components/schemas/Task"
+    TaskListResponse:
+      description: List of tasks response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TaskList"              
     UserResponse:
       description: User response
       content:
