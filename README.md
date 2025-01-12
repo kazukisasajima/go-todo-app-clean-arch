@@ -37,7 +37,10 @@ oapi-codegen --config=./adapter/controller/echo/config.yaml ./api/openapi.yaml
 1. リポジトリをクローンします。
 
 ```sh
-git clone [git@github.com:kazukisasajima/go-todo-app-clean-arch.git](git@github.com:kazukisasajima/go-todo-app-clean-arch.git)
+git clone git@github.com:kazukisasajima/go-todo-app-clean-arch.git
+```
+
+```sh
 cd go-todo-app-clean-arch
 ```
 
